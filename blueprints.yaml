@@ -1,0 +1,85 @@
+name: Email SMTP2GO
+slug: email-smtp2go
+type: plugin
+version: 1.0.0
+testing: false
+description: SMTP2GO integration for the Email plugin (API and SMTP)
+icon: envelope
+author:
+  name: Team Grav
+  email: devs@getgrav.org
+homepage: https://github.com/getgrav/grav-plugin-email-smtp2go
+keywords: grav, plugin, email, smtp2go, smtp, api
+bugs: https://github.com/getgrav/grav-plugin-email-smtp2go/issues
+docs: https://github.com/getgrav/grav-plugin-email-smtp2go/blob/develop/README.md
+license: MIT
+
+compatibility:
+  grav: ['1.7', '2.0']
+
+dependencies:
+  - { name: grav, version: '>=1.7.0' }
+  - { name: email, version: '>=4.0.0' }
+
+form:
+  validation: loose
+  fields:
+    enabled:
+      type: toggle
+      label: PLUGIN_ADMIN.PLUGIN_STATUS
+      highlight: 1
+      default: 0
+      options:
+        1: PLUGIN_ADMIN.ENABLED
+        0: PLUGIN_ADMIN.DISABLED
+      validate:
+        type: bool
+
+    transport:
+      type: select
+      size: small
+      label: Transport
+      default: api
+      options:
+        api: API (faster)
+        smtp: SMTP
+
+    api_key:
+      type: text
+      label: API Key
+      help: SMTP2GO API key (begins with `api-`). Used when transport is API.
+
+    username:
+      type: text
+      label: SMTP Username
+      help: SMTP2GO SMTP user (created in the SMTP2GO dashboard). Used when transport is SMTP.
+
+    password:
+      type: password
+      label: SMTP Password
+      help: Password for the SMTP user above. Used when transport is SMTP.
+
+    port:
+      type: select
+      size: small
+      label: SMTP Port
+      default: 2525
+      help: 2525 (recommended), 25, 8025, or 587 for STARTTLS, 465 for implicit TLS.
+      options:
+        2525: 2525 (STARTTLS)
+        587: 587 (STARTTLS)
+        25: 25 (STARTTLS)
+        8025: 8025 (STARTTLS)
+        465: 465 (TLS)
+
+    tls:
+      type: toggle
+      label: Implicit TLS
+      highlight: 1
+      default: 0
+      help: Enable for port 465 (implicit TLS). Leave off for STARTTLS ports.
+      options:
+        1: PLUGIN_ADMIN.YES
+        0: PLUGIN_ADMIN.NO
+      validate:
+        type: bool

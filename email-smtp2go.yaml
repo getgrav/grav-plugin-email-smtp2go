@@ -1,0 +1,7 @@
+enabled: true
+transport: api
+api_key:
+username:
+password:
+port: 2525
+tls: false

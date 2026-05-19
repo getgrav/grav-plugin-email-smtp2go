@@ -1,0 +1,33 @@
+{
+  "name": "getgrav/email-smtp2go",
+  "type": "grav-plugin",
+  "description": "SMTP2GO integration for the Email plugin (API and SMTP)",
+  "keywords": ["plugin", "email", "smtp2go"],
+  "homepage": "https://github.com/getgrav/grav-plugin-email-smtp2go",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Team Grav",
+      "email": "devs@getgrav.org",
+      "role": "Developer"
+    }
+  ],
+  "require": {
+    "php": ">=7.3.6"
+  },
+  "replace": {
+    "symfony/mailer": "*",
+    "psr/event-dispatcher": "*"
+  },
+  "autoload": {
+    "psr-4": {
+      "Grav\\Plugin\\EmailSmtp2go\\": "classes/"
+    },
+    "classmap":  ["email-smtp2go.php"]
+  },
+  "config": {
+    "platform": {
+      "php": "7.3.6"
+    }
+  }
+}

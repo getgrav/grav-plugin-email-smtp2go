@@ -1,7 +1,7 @@
 name: Email SMTP2GO
 slug: email-smtp2go
 type: plugin
-version: 1.0.0
+version: 1.0.1
 testing: false
 description: SMTP2GO integration for the Email plugin (API and SMTP)
 icon: envelope

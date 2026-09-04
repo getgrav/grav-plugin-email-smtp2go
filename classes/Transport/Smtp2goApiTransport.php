@@ -23,7 +23,7 @@ class Smtp2goApiTransport extends AbstractApiTransport
 
     private $key;
 
-    public function __construct(string $key, HttpClientInterface $client = null, EventDispatcherInterface $dispatcher = null, LoggerInterface $logger = null)
+    public function __construct(string $key, ?HttpClientInterface $client = null, ?EventDispatcherInterface $dispatcher = null, ?LoggerInterface $logger = null)
     {
         $this->key = $key;
 
@@ -74,7 +74,7 @@ class Smtp2goApiTransport extends AbstractApiTransport
         return $response;
     }
 
-    private function getPayload(Email $email, Envelope $envelope): array
+    protected function getPayload(Email $email, Envelope $envelope): array
     {
         $addressStringifier = static function (Address $address): string {
             $name = $address->getName();
@@ -138,7 +138,18 @@ class Smtp2goApiTransport extends AbstractApiTransport
         }
 
         $tags = [];
-        $skipHeaders = ['from', 'to', 'cc', 'bcc', 'subject', 'reply-to', 'sender', 'date', 'message-id', 'mime-version', 'content-type', 'content-transfer-encoding'];
+
+        // Headers the payload already expresses in a field of its own, plus the
+        // ones SMTP2GO writes itself. Everything else on the message is carried
+        // through verbatim, with its original case, so that headers a caller
+        // added by hand - List-Unsubscribe and List-Unsubscribe-Post on a bulk
+        // send, Precedence, any X- header - reach the recipient on the API path
+        // exactly as they would over SMTP.
+        //
+        // Return-Path belongs to the envelope rather than the message: SMTP2GO
+        // sets its own so that bounces come back to them, and sending ours in
+        // custom_headers only risks a duplicate on the delivered mail.
+        $skipHeaders = ['from', 'to', 'cc', 'bcc', 'subject', 'reply-to', 'sender', 'date', 'message-id', 'mime-version', 'content-type', 'content-transfer-encoding', 'return-path'];
         foreach ($email->getHeaders()->all() as $header) {
             if ($header instanceof TagHeader) {
                 $tags[] = mb_substr($header->getValue(), 0, 255);

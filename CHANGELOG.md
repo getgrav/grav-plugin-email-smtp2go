@@ -1,5 +1,5 @@
 # v1.1.0
-## 09/04/2026
+## 09/05/2026
 
 1. [](#new)
     * Delivery reports. This plugin now tells the Email plugin everything it knows about SMTP2GO through the Email plugin's new provider contract: how to read and check a delivery webhook, how to create one from the API key you already pasted in, what a sending domain's DNS has to say, and what each of the two transports does to a custom header. Anything on the site that records bounces, complaints, opens and clicks — the KahunaCart Newsletter add-on today — asks the Email plugin for it instead of carrying its own copy, so SMTP2GO renaming a field is one plugin to update rather than several. All of this used to live in the newsletter add-on and has moved here, where the API key already is.

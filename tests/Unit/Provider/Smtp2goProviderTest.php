@@ -6,6 +6,7 @@ namespace Grav\Plugin\EmailSmtp2go\Tests\Unit\Provider;
 
 use Grav\Plugin\Email\Providers\Provider;
 use Grav\Plugin\Email\Providers\ProviderRegistry;
+use Grav\Plugin\Email\Providers\SendHeader;
 use Grav\Plugin\EmailSmtp2go\Provider\Smtp2goApi;
 use Grav\Plugin\EmailSmtp2go\Provider\Smtp2goProvider;
 use Grav\Plugin\EmailSmtp2go\Provider\Smtp2goReports;
@@ -61,7 +62,7 @@ final class Smtp2goProviderTest extends TestCase
         self::assertTrue($capabilities->customHeaders);
         self::assertTrue($capabilities->unsubscribeHeaders);
         self::assertTrue($capabilities->echoesHeaders);
-        self::assertStringContainsString(Smtp2goReports::SEND_HEADER, $capabilities->echoNote);
+        self::assertStringContainsString(SendHeader::name(), $capabilities->echoNote);
         self::assertStringContainsString('Headers list', $capabilities->echoNote);
     }
 
@@ -183,7 +184,7 @@ final class Smtp2goProviderTest extends TestCase
 
         self::assertStringContainsString('Webhooks', $instructions);
         self::assertStringContainsString('JSON', $instructions);
-        self::assertStringContainsString(Smtp2goReports::SEND_HEADER, $instructions);
+        self::assertStringContainsString(SendHeader::name(), $instructions);
     }
 
     /**
@@ -197,7 +198,12 @@ final class Smtp2goProviderTest extends TestCase
     {
         $yaml = (string)file_get_contents(\dirname(__DIR__, 3) . '/languages.yaml');
 
-        self::assertStringContainsString((new Smtp2goProvider())->instructions(), $yaml);
+        // Both carry the header as `%header%` and both have it put in at the
+        // last moment, because the name is the site's to change and a sentence
+        // with a header baked into it is a sentence that goes wrong quietly.
+        $said = str_replace(SendHeader::name(), '%header%', (new Smtp2goProvider())->instructions());
+
+        self::assertStringContainsString($said, $yaml);
     }
 
     // ------------------------------------------------------------- internals

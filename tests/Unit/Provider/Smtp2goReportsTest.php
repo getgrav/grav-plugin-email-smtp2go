@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Grav\Plugin\EmailSmtp2go\Tests\Unit\Provider;
 
 use Grav\Plugin\Email\Providers\Event;
+use Grav\Plugin\Email\Providers\SendHeader;
 use Grav\Plugin\Email\Providers\WebhookRequest;
 use Grav\Plugin\EmailSmtp2go\Provider\Smtp2goReports;
 use PHPUnit\Framework\TestCase;
@@ -73,11 +74,21 @@ final class Smtp2goReportsTest extends TestCase
         yield 'open' => ['open', ['type' => Event::OPENED]];
         yield 'click' => ['click', ['type' => Event::CLICKED]];
 
-        // Three they send and this store does not act on. `reject` is the
-        // interesting one - see the note on Smtp2goReports::TYPES.
+        // SMTP2GO refusing to send at all, which is a drop and not a bounce:
+        // nothing was ever handed to a receiving server. Their own message for
+        // it names the reason.
+        yield 'reject' => ['reject', [
+            'type' => Event::DROPPED,
+            'hard' => null,
+            'email' => 'suppressed@example.net',
+            'message_id' => '20260904101501.1234@example.com',
+            'send_id' => '41',
+            'reason' => 'Recipient address is on the account suppression list',
+        ]];
+
+        // Two they send and this store does not act on.
         yield 'processed is not acted on' => ['processed', null];
         yield 'unsubscribe is not acted on' => ['unsubscribe', null];
-        yield 'reject is not acted on' => ['reject', null];
     }
 
     /**
@@ -171,7 +182,7 @@ final class Smtp2goReportsTest extends TestCase
             'event' => 'delivered',
             'time' => '2026-09-04T10:15:06Z',
             'rcpt' => 'a@example.com',
-            'custom_headers' => ['X-KahunaCart-Send' => 77],
+            'custom_headers' => ['X-Grav-Send-Id' => 77],
         ]);
 
         $event = (new Smtp2goReports())->parse(new WebhookRequest(body: $nested))->events[0];
@@ -182,7 +193,7 @@ final class Smtp2goReportsTest extends TestCase
             'event' => 'delivered',
             'time' => '2026-09-04T10:15:06Z',
             'rcpt' => 'a@example.com',
-            'x-kahunacart-send' => '78',
+            'x-grav-send-id' => '78',
         ]);
 
         $event = (new Smtp2goReports())->parse(new WebhookRequest(body: $lower))->events[0];
@@ -231,12 +242,12 @@ final class Smtp2goReportsTest extends TestCase
     }
 
     /** What this provider reports, and what it needs to verify a request. */
-    public function testItReportsFiveEventsAndNeedsNoCredentialToVerify(): void
+    public function testItReportsSixEventsAndNeedsNoCredentialToVerify(): void
     {
         $reports = new Smtp2goReports();
 
         self::assertSame(
-            [Event::DELIVERED, Event::BOUNCED, Event::COMPLAINED, Event::OPENED, Event::CLICKED],
+            [Event::DELIVERED, Event::BOUNCED, Event::COMPLAINED, Event::OPENED, Event::CLICKED, Event::DROPPED],
             $reports->events()
         );
 
@@ -245,7 +256,8 @@ final class Smtp2goReportsTest extends TestCase
         }
 
         self::assertSame([], $reports->verificationKeys(), 'SMTP2GO signs nothing, so the URL secret is the check');
-        self::assertSame('X-KahunaCart-Send', $reports->sendHeader());
+        self::assertSame(SendHeader::name(), $reports->sendHeader(), 'the name is the Email plugin\'s, never one of ours');
+        self::assertSame('X-Grav-Send-Id', $reports->sendHeader());
     }
 
     // ------------------------------------------------------------- internals

@@ -8,6 +8,7 @@ use Grav\Plugin\Email\Providers\Capabilities;
 use Grav\Plugin\Email\Providers\DeliveryReports;
 use Grav\Plugin\Email\Providers\DomainFacts;
 use Grav\Plugin\Email\Providers\Provider;
+use Grav\Plugin\Email\Providers\SendHeader;
 use Grav\Plugin\Email\Providers\WebhookSetup;
 
 /**
@@ -106,7 +107,7 @@ final class Smtp2goProvider implements Provider
             echoesHeaders: true,
             echoNote: 'SMTP2GO only sends a custom header back on its webhooks when the header is named on the '
                 . 'webhook itself. Pressing Set up adds it for you; if you made the webhook by hand, add '
-                . Smtp2goReports::SEND_HEADER . ' to its Headers list.',
+                . SendHeader::name() . ' to its Headers list.',
         );
     }
 
@@ -155,13 +156,13 @@ final class Smtp2goProvider implements Provider
      */
     public function instructions(): string
     {
-        return self::say(
+        return str_replace('%header%', SendHeader::name(), self::say(
             self::INSTRUCTIONS_KEY,
             'In SMTP2GO, open Settings then Webhooks and add a webhook with this URL, output format JSON, and the '
-            . 'delivered, bounce, spam complaint, open and click events ticked. Add ' . Smtp2goReports::SEND_HEADER
-            . ' to the webhook\'s own Headers list. Or paste an API key into this plugin and press Set up, which '
-            . 'does all of that for you.'
-        );
+            . 'delivered, bounce, spam complaint, open, click and reject events ticked. Add %header% to the '
+            . 'webhook\'s own Headers list. Or paste an API key into this plugin and press Set up, which does all '
+            . 'of that for you.'
+        ));
     }
 
     // ------------------------------------------------------------- internals

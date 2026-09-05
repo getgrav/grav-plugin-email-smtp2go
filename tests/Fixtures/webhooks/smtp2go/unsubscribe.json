@@ -13,5 +13,5 @@
   "id": "de71c204-3a5f-4d88-b2e6-9c1f7a04b8d3",
   "message-id": "<20260904101501.1234@example.com>",
   "subject": "Your order #1042 is confirmed",
-  "X-KahunaCart-Send": "41"
+  "X-Grav-Send-Id": "41"
 }

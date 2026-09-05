@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Grav\Plugin\EmailSmtp2go\Tests\Unit\Provider;
 
 use Grav\Plugin\Email\Providers\Event;
+use Grav\Plugin\Email\Providers\SendHeader;
 use Grav\Plugin\EmailSmtp2go\Provider\Smtp2goApi;
 use Grav\Plugin\EmailSmtp2go\Provider\Smtp2goSetup;
 use Grav\Plugin\EmailSmtp2go\Tests\Support\FakeHttp;
@@ -23,7 +24,14 @@ final class Smtp2goSetupTest extends TestCase
 {
     private const URL = 'https://store.example.com/newsletter/webhook/smtp2go/a-very-long-secret';
 
-    private const EVENTS = [Event::DELIVERED, Event::BOUNCED, Event::COMPLAINED, Event::OPENED, Event::CLICKED];
+    private const EVENTS = [
+        Event::DELIVERED,
+        Event::BOUNCED,
+        Event::COMPLAINED,
+        Event::OPENED,
+        Event::CLICKED,
+        Event::DROPPED,
+    ];
 
     public function testItCreatesTheWebhookAndSaysWhichOneItMade(): void
     {
@@ -59,17 +67,18 @@ final class Smtp2goSetupTest extends TestCase
 
         self::assertNotNull($call);
         self::assertSame('json', $call['body']['output_format']);
-        self::assertSame(['X-KahunaCart-Send'], $call['body']['headers']);
+        self::assertSame([SendHeader::name()], $call['body']['headers']);
         self::assertSame(self::URL, $call['body']['url']);
-        self::assertSame(['delivered', 'bounce', 'spam', 'open', 'click'], $call['body']['events']);
+        self::assertSame(['delivered', 'bounce', 'spam', 'open', 'click', 'reject'], $call['body']['events']);
         self::assertSame('api-a-real-key', $call['headers'][Smtp2goApi::KEY_HEADER]);
     }
 
     /**
-     * A contract event SMTP2GO cannot report is dropped rather than refused.
+     * A contract event SMTP2GO has no name for is dropped rather than refused.
      *
-     * Asking for `dropped` as well should register the five that exist, because
-     * a provider maps what it can and ignores the rest.
+     * `dropped` is `reject` here, so the pair asked for is the pair registered;
+     * a word SMTP2GO has never heard of costs the one event rather than the
+     * whole webhook, because a provider maps what it can and ignores the rest.
      */
     public function testAnEventThisProviderCannotReportIsLeftOutRatherThanRefused(): void
     {
@@ -77,10 +86,10 @@ final class Smtp2goSetupTest extends TestCase
             ->willAnswer('/webhook/view', 200, ['data' => ['webhooks' => []]])
             ->willAnswer('/webhook/add', 200, ['data' => ['id' => 1]]);
 
-        $result = self::button($http)->create(self::URL, [Event::BOUNCED, Event::DROPPED], []);
+        $result = self::button($http)->create(self::URL, [Event::BOUNCED, Event::DROPPED, 'sms_delivered'], []);
 
         self::assertTrue($result->ok);
-        self::assertSame(['bounce'], $http->callTo('/webhook/add')['body']['events']);
+        self::assertSame(['bounce', 'reject'], $http->callTo('/webhook/add')['body']['events']);
     }
 
     /**

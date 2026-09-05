@@ -7,6 +7,7 @@ namespace Grav\Plugin\EmailSmtp2go\Provider;
 use Grav\Plugin\Email\Providers\DeliveryReports;
 use Grav\Plugin\Email\Providers\Event;
 use Grav\Plugin\Email\Providers\Payload;
+use Grav\Plugin\Email\Providers\SendHeader;
 use Grav\Plugin\Email\Providers\Verdict;
 use Grav\Plugin\Email\Providers\WebhookRequest;
 
@@ -65,18 +66,6 @@ use Grav\Plugin\Email\Providers\WebhookRequest;
  */
 final class Smtp2goReports implements DeliveryReports
 {
-    /**
-     * The header a store stamps its send id into.
-     *
-     * Named here rather than by the store so the two cannot disagree about it:
-     * this is the header {@see Smtp2goSetup} registers on the webhook, and an
-     * unregistered header is one SMTP2GO does not echo. It is spelled the way
-     * KahunaCart's newsletter add-on has spelled it since it was the only thing
-     * reading these webhooks; anything else that wants delivery reports asks
-     * for the name rather than assuming one.
-     */
-    public const SEND_HEADER = 'X-KahunaCart-Send';
-
     /** The optional Authorization header a merchant may have set by hand. */
     public const AUTH_HEADER_KEY = 'auth_header';
 
@@ -86,25 +75,24 @@ final class Smtp2goReports implements DeliveryReports
     public const EVENT_SPAM = 'spam';
     public const EVENT_OPEN = 'open';
     public const EVENT_CLICK = 'click';
+    public const EVENT_REJECT = 'reject';
 
     /**
      * Their words to ours. Everything they send that is not here —
-     * `processed`, `reject`, `unsubscribe`, `resubscribe`, and every `sms_*`
-     * event — is a 200 and a log line rather than an error.
+     * `processed`, `unsubscribe`, `resubscribe`, and every `sms_*` event — is a
+     * 200 and a log line rather than an error.
+     *
+     * `reject` is SMTP2GO refusing to send at all, and their own sample message
+     * for it is "Recipient address is on the account suppression list". Nothing
+     * was handed to a receiving server, so it is not a bounce; it is
+     * {@see Event::DROPPED}, which is the word the contract has for exactly
+     * this. What a store then does with it is the store's business.
      *
      * `unsubscribe` is deliberately not mapped. SMTP2GO reports it when
      * somebody uses *their* unsubscribe link, and a store that carries its own
      * `List-Unsubscribe` is not using theirs: acting on both would be acting
      * twice on one press, and acting on theirs instead would leave the store's
      * own list untouched.
-     *
-     * `reject` is deliberately not mapped either, and that one is worth a
-     * second look one day: SMTP2GO reports it when it refuses to send at all,
-     * which is what {@see Event::DROPPED} was added for. Leaving it skipped is
-     * what the newsletter's parser did before this moved here, and changing it
-     * would start suppressing addresses that are not currently suppressed —
-     * a decision for whoever owns the store's suppression rules rather than for
-     * a refactor.
      *
      * @var array<string, string>
      */
@@ -114,6 +102,7 @@ final class Smtp2goReports implements DeliveryReports
         self::EVENT_SPAM => Event::COMPLAINED,
         self::EVENT_OPEN => Event::OPENED,
         self::EVENT_CLICK => Event::CLICKED,
+        self::EVENT_REJECT => Event::DROPPED,
     ];
 
     /** @return list<string> */
@@ -188,7 +177,7 @@ final class Smtp2goReports implements DeliveryReports
 
     public function sendHeader(): string
     {
-        return self::SEND_HEADER;
+        return SendHeader::name();
     }
 
     // ------------------------------------------------------------- internals
@@ -262,23 +251,6 @@ final class Smtp2goReports implements DeliveryReports
      */
     private static function sendId(array $body): ?string
     {
-        $header = self::SEND_HEADER;
-        $custom = $body['custom_headers'] ?? null;
-
-        $value = $body[$header]
-            ?? $body[strtolower($header)]
-            ?? (\is_array($custom) ? ($custom[$header] ?? $custom[strtolower($header)] ?? null) : null);
-
-        if (\is_int($value) || \is_float($value)) {
-            $value = (string)$value;
-        }
-
-        if (!\is_string($value)) {
-            return null;
-        }
-
-        $value = trim($value);
-
-        return $value === '' ? null : $value;
+        return SendHeader::idIn($body) ?? SendHeader::idIn($body['custom_headers'] ?? null);
     }
 }

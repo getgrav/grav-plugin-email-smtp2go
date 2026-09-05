@@ -54,6 +54,7 @@ final class Smtp2goSetup implements WebhookSetup
         Event::COMPLAINED => 'spam',
         Event::OPENED => 'open',
         Event::CLICKED => 'click',
+        Event::DROPPED => 'reject',
     ];
 
     /**
@@ -109,11 +110,11 @@ final class Smtp2goSetup implements WebhookSetup
      * SMTP2GO's names for the events the caller asked for.
      *
      * An event this provider cannot report is dropped rather than refused: the
-     * contract says a provider maps what it can and ignores the rest, and a
-     * caller asking for `dropped` as well should get a webhook for the five
-     * that exist rather than an error about the one that does not. Asking for
-     * nothing at all registers the five, because a webhook for no events is a
-     * webhook that never fires.
+     * contract says a provider maps what it can and ignores the rest, so a
+     * caller asking for something SMTP2GO has no name for gets a webhook for
+     * the ones it does have rather than an error. Asking for nothing at all
+     * registers all six, because a webhook for no events is a webhook that
+     * never fires.
      *
      * @param  list<string> $events
      * @return list<string>

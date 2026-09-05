@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Grav\Plugin\EmailSmtp2go\Provider;
 
+use Grav\Plugin\Email\Providers\SendHeader;
+
 /**
  * The two things this plugin asks SMTP2GO about itself.
  *
@@ -57,7 +59,7 @@ final class Smtp2goApi
      *
      * @var list<string>
      */
-    public const EVENTS = ['delivered', 'bounce', 'spam', 'open', 'click'];
+    public const EVENTS = ['delivered', 'bounce', 'spam', 'open', 'click', 'reject'];
 
     /**
      * One answer per domain per request.
@@ -99,7 +101,7 @@ final class Smtp2goApi
             // See the class note: without this the webhook posts form-encoded
             // bodies and nothing downstream can read them.
             'output_format' => 'json',
-            'headers' => [Smtp2goReports::SEND_HEADER],
+            'headers' => [SendHeader::name()],
         ], [self::KEY_HEADER => $apiKey]);
 
         if ($answer['status'] === 0) {

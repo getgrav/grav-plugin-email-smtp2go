@@ -48,7 +48,7 @@ Sending mail tells you it left the building. A delivery report tells you what ha
 
 You do not set any of this up here. A plugin that wants delivery reports — the KahunaCart Newsletter add-on is the one that does today — mints the address, shows it on its own screen and asks this plugin to check and read what arrives. This plugin's job is knowing SMTP2GO: which of their event names means what, that a permanent failure is the word `hard`, where they put an echoed header, and what a sending domain's DNS has to say. That used to live in the add-on, which meant a sixth provider was a change to somebody else's plugin. Now it lives here.
 
-**What you get once it is set up.** Bounced addresses stop being mailed. Complaints do the same. Delivered, opened and clicked counts fill in per campaign. Nothing else changes about how mail is sent.
+**What you get once it is set up.** Bounced addresses stop being mailed. Complaints do the same. So do the messages SMTP2GO refuses to send at all, which it calls **reject** and reports when the address is already on your account's suppression list. Delivered, opened and clicked counts fill in per campaign. Nothing else changes about how mail is sent.
 
 **The one button.** Paste your API key into the field above and press whatever the other plugin calls Set up — in the newsletter add-on it is "Set up in SMTP2GO". The webhook is created for you with the right events, the JSON output format and the send header registered. Pressing it twice leaves one webhook, not two. The key needs the Webhooks permission: in SMTP2GO, open **Settings → API Keys**, open your key and tick **Webhooks**. A send-only key sends mail perfectly well and cannot create a webhook, and that is by far the most common reason the button refuses.
 
@@ -57,8 +57,8 @@ You do not set any of this up here. A plugin that wants delivery reports — the
 1. In SMTP2GO open **Settings → Webhooks** and add a webhook.
 2. Paste in the address the other plugin is showing you.
 3. Set the output format to **JSON**. Their default is form-encoded, which nothing can read — and a webhook left on it looks perfectly healthy in their dashboard.
-4. Tick **delivered**, **bounce**, **spam complaint**, **open** and **click**. Leave the rest; they are answered with a 200 and ignored.
-5. Add `X-KahunaCart-Send` to the webhook's own **Headers** list. SMTP2GO only sends `Subject` and `Message-id` back by default, and a header that is not named here is never echoed.
+4. Tick **delivered**, **bounce**, **spam complaint**, **open**, **click** and **reject**. Leave the rest; they are answered with a 200 and ignored.
+5. Add `X-Grav-Send-Id` to the webhook's own **Headers** list. SMTP2GO only sends `Subject` and `Message-id` back by default, and a header that is not named here is never echoed. That is the header unless the site has set `providers.send_header` in the Email plugin's own configuration, in which case use whatever it says — the add-on showing you this address will name it.
 
 **How the address is protected.** SMTP2GO does not sign its webhooks — there is no signature to check and no setting that adds one — so the secret in the address is the whole of it, which is why the plugin that mints it makes it long. SMTP2GO's dashboard does offer an optional `Authorization` header. If you set one by hand, tell the other plugin what you set and it will be checked as well.
 

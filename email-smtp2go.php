@@ -3,6 +3,7 @@ namespace Grav\Plugin;
 
 use Composer\Autoload\ClassLoader;
 use Grav\Common\Plugin;
+use Grav\Plugin\EmailSmtp2go\Provider\Smtp2goProvider;
 use Grav\Plugin\EmailSmtp2go\Transport\Smtp2goApiTransport;
 use Grav\Plugin\EmailSmtp2go\Transport\Smtp2goSmtpTransport;
 use RocketTheme\Toolbox\Event\Event;
@@ -18,6 +19,7 @@ class EmailSmtp2goPlugin extends Plugin
         return [
             'onEmailEngines'      => ['onEmailEngines', 0],
             'onEmailTransportDsn' => ['onEmailTransportDsn', 0],
+            'onEmailProviders'    => ['onEmailProviders', 0],
         ];
     }
 
@@ -57,5 +59,35 @@ class EmailSmtp2goPlugin extends Plugin
 
         $e['dsn'] = $dsn;
         $e->stopPropagation();
+    }
+
+    /**
+     * Tell the Email plugin what this plugin knows about SMTP2GO.
+     *
+     * How its delivery webhooks are verified and read, how one is created from
+     * the API key already pasted in above, and what a sending domain's DNS has
+     * to say. Anything that wants those asks the Email plugin for the provider
+     * rather than carrying a copy of them.
+     *
+     * The version guard is not decoration. The contract's classes use readonly
+     * promoted properties, which are PHP 8.1, and this plugin still supports
+     * the 7.4 sites Grav 1.7 supports. `Email::supportsFeature('providers')`
+     * answers false below 8.1 for the same reason, so a caller that asks
+     * properly never gets here — but `Email::providers()` can be called
+     * directly, and a fatal parse error on an old site would be a poor way to
+     * find that out.
+     */
+    public function onEmailProviders(Event $e): void
+    {
+        if (PHP_VERSION_ID < 80100) {
+            return;
+        }
+
+        $providers = $e['providers'] ?? null;
+        if (!is_object($providers) || !method_exists($providers, 'add')) {
+            return;
+        }
+
+        $providers->add(new Smtp2goProvider((array)$this->config->get('plugins.email-smtp2go', [])));
     }
 }

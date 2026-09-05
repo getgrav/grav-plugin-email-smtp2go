@@ -1,0 +1,18 @@
+{
+  "event": "delivered",
+  "time": "2026-09-04T10:15:06Z",
+  "sendtime": "2026-09-04T10:15:01Z",
+  "sender": "orders@example.com",
+  "from": "Example Store <orders@example.com>",
+  "from_address": "orders@example.com",
+  "from_name": "Example Store",
+  "rcpt": "customer@example.net",
+  "recipients": ["customer@example.net"],
+  "auth": "api-5BFDE1E62529",
+  "message": "250 Message received",
+  "email_id": "1u0SwL-B9zBpi9ffUq-JAB2",
+  "id": "3d2b8c41-05af-49e0-8f2a-6a1f9c0e4b77",
+  "message-id": "<20260904101501.1234@example.com>",
+  "subject": "Your order #1042 is confirmed",
+  "X-KahunaCart-Send": "41"
+}

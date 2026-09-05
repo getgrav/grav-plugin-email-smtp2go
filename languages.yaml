@@ -1,0 +1,3 @@
+en:
+  PLUGIN_EMAIL_SMTP2GO:
+    PROVIDER_INSTRUCTIONS: "In SMTP2GO, open Settings then Webhooks and add a webhook with this URL, output format JSON, and the delivered, bounce, spam complaint, open and click events ticked. Add X-KahunaCart-Send to the webhook's own Headers list. Or paste an API key into this plugin and press Set up, which does all of that for you."

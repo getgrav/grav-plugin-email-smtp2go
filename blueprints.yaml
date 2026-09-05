@@ -1,7 +1,7 @@
 name: Email SMTP2GO
 slug: email-smtp2go
 type: plugin
-version: 1.0.1
+version: 1.1.0
 testing: false
 description: SMTP2GO integration for the Email plugin (API and SMTP)
 icon: envelope
@@ -47,7 +47,7 @@ form:
     api_key:
       type: text
       label: API Key
-      help: SMTP2GO API key (begins with `api-`). Used when transport is API.
+      help: SMTP2GO API key (begins with `api-`). Sends the mail when Transport is API, and is also what sets up delivery reports and reads your sending domain's DNS from SMTP2GO — those work on the SMTP transport too, so it is worth filling in either way. For the delivery-report webhook it needs the Webhooks permission, which is set on the key's own page under Settings, API Keys.
 
     username:
       type: text

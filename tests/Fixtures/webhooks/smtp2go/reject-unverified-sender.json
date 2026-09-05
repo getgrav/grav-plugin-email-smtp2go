@@ -1,0 +1,18 @@
+{
+  "event": "reject",
+  "time": "2026-09-05T09:02:11Z",
+  "sendtime": "2026-09-05T09:02:11Z",
+  "sender": "orders@example.com",
+  "from": "Example Store <orders@example.com>",
+  "from_address": "orders@example.com",
+  "from_name": "Example Store",
+  "rcpt": "customer@example.net",
+  "recipients": ["customer@example.net"],
+  "auth": "api-5BFDE1E62529",
+  "message": "Sending from an unverified sender is not allowed",
+  "email_id": "1u0SwL-B9zBpi9ffUq-JAB9",
+  "id": "0c1a7f34-9de2-4c11-9a08-7d5b31e0f2aa",
+  "message-id": "<20260905090211.9911@example.com>",
+  "subject": "Your order #1042 is confirmed",
+  "X-Grav-Send-Id": "41"
+}

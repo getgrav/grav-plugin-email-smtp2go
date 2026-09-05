@@ -86,7 +86,8 @@ final class Smtp2goReports implements DeliveryReports
      * for it is "Recipient address is on the account suppression list". Nothing
      * was handed to a receiving server, so it is not a bounce; it is
      * {@see Event::DROPPED}, which is the word the contract has for exactly
-     * this. What a store then does with it is the store's business.
+     * this. Whether it was the address or the message that was refused is on
+     * the event's `hard`; see {@see refusedAddress()}.
      *
      * `unsubscribe` is deliberately not mapped. SMTP2GO reports it when
      * somebody uses *their* unsubscribe link, and a store that carries its own
@@ -103,6 +104,49 @@ final class Smtp2goReports implements DeliveryReports
         self::EVENT_OPEN => Event::OPENED,
         self::EVENT_CLICK => Event::CLICKED,
         self::EVENT_REJECT => Event::DROPPED,
+    ];
+
+    /**
+     * Words in a reject's `message` that name the recipient's address.
+     *
+     * SMTP2GO's documentation says a reject "happens if you attempt to send an
+     * email to a recipient that has previously hard-bounced, made a spam
+     * complaint, or unsubscribed", and their own sample message is "Recipient
+     * address is on the account suppression list". Every one of those is the
+     * address: SMTP2GO will refuse the next message to it too, whatever the
+     * next message says.
+     *
+     * Matched on the words rather than on the whole sentence, because the
+     * sentence is theirs to reword and the words are the fact in it.
+     *
+     * @var list<string>
+     */
+    public const ADDRESS_WORDS = [
+        'suppression list',
+        'suppressed',
+        'unsubscrib',
+        'spam complaint',
+        'complained',
+        'bounced',
+        'hard-bounce',
+        'hard bounce',
+    ];
+
+    /**
+     * Words that name the message or the sender instead, and are checked first.
+     *
+     * The one SMTP2GO documents is the other half of the same sentence: a
+     * reject "is also encountered if sending is attempted from an unverified
+     * sender". Nothing there is the recipient's doing, and a store that took
+     * somebody off its list for it would be punishing them for the merchant
+     * having not finished setting the account up.
+     *
+     * @var list<string>
+     */
+    public const MESSAGE_WORDS = [
+        'unverified',
+        'not verified',
+        'sender address',
     ];
 
     /** @return list<string> */
@@ -163,6 +207,10 @@ final class Smtp2goReports implements DeliveryReports
             $hard = strtolower(trim((string)($body['bounce'] ?? ''))) === 'hard';
         }
 
+        if ($type === Event::DROPPED) {
+            $hard = self::refusedAddress($body);
+        }
+
         return Payload::of([Event::of(
             $type,
             $hard,
@@ -181,6 +229,42 @@ final class Smtp2goReports implements DeliveryReports
     }
 
     // ------------------------------------------------------------- internals
+
+    /**
+     * Whether a reject was SMTP2GO refusing the address or refusing the message.
+     *
+     * True is the address and false is the message, which is what the contract
+     * puts on {@see Event::$hard} for a drop. Their `message` is the only thing
+     * a reject carries that says which, so it is read for the words in
+     * {@see MESSAGE_WORDS} first and {@see ADDRESS_WORDS} second.
+     *
+     * Anything that matches neither is false. That is deliberate and it is the
+     * asymmetry worth having: a false costs a store one message it will be
+     * refused for again, and a wrong true costs it a subscriber for good.
+     *
+     * @param array<string, mixed> $body
+     */
+    private static function refusedAddress(array $body): bool
+    {
+        $why = mb_strtolower(trim((string)($body['message'] ?? '')));
+        if ($why === '') {
+            return false;
+        }
+
+        foreach (self::MESSAGE_WORDS as $word) {
+            if (str_contains($why, $word)) {
+                return false;
+            }
+        }
+
+        foreach (self::ADDRESS_WORDS as $word) {
+            if (str_contains($why, $word)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     /**
      * Who it was about.

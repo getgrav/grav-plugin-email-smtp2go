@@ -76,14 +76,25 @@ final class Smtp2goReportsTest extends TestCase
 
         // SMTP2GO refusing to send at all, which is a drop and not a bounce:
         // nothing was ever handed to a receiving server. Their own message for
-        // it names the reason.
+        // it names the address, so `hard` is true and a store may suppress.
         yield 'reject' => ['reject', [
             'type' => Event::DROPPED,
-            'hard' => null,
+            'hard' => true,
             'email' => 'suppressed@example.net',
             'message_id' => '20260904101501.1234@example.com',
             'send_id' => '41',
             'reason' => 'Recipient address is on the account suppression list',
+        ]];
+
+        // The other half of their documented sentence: a reject "is also
+        // encountered if sending is attempted from an unverified sender". That
+        // is the merchant's account, not the recipient, so `hard` is false and
+        // nobody comes off a list for it.
+        yield 'reject for an unverified sender' => ['reject-unverified-sender', [
+            'type' => Event::DROPPED,
+            'hard' => false,
+            'email' => 'customer@example.net',
+            'reason' => 'Sending from an unverified sender is not allowed',
         ]];
 
         // Two they send and this store does not act on.
@@ -258,6 +269,52 @@ final class Smtp2goReportsTest extends TestCase
         self::assertSame([], $reports->verificationKeys(), 'SMTP2GO signs nothing, so the URL secret is the check');
         self::assertSame(SendHeader::name(), $reports->sendHeader(), 'the name is the Email plugin\'s, never one of ours');
         self::assertSame('X-Grav-Send-Id', $reports->sendHeader());
+    }
+
+    /**
+     * Every reject reason, and which of the two refusals it is.
+     *
+     * @return iterable<string, array{0: string, 1: bool}>
+     */
+    public static function rejectReasons(): iterable
+    {
+        // The address. SMTP2GO refuses the next message to it as well.
+        yield 'their own sample' => ['Recipient address is on the account suppression list', true];
+        yield 'the global list' => ['Recipient address is on the global suppression list', true];
+        yield 'a previous hard bounce' => ['Recipient has previously hard-bounced', true];
+        yield 'a spam complaint' => ['Recipient made a spam complaint', true];
+        yield 'an unsubscribe' => ['Recipient has unsubscribed', true];
+        yield 'case does not matter' => ['RECIPIENT ADDRESS IS ON THE ACCOUNT SUPPRESSION LIST', true];
+
+        // The message, or the account. Nothing here is the recipient's doing.
+        yield 'an unverified sender' => ['Sending from an unverified sender is not allowed', false];
+        yield 'a sender that is not verified' => ['The sender is not verified', false];
+
+        // Anything that cannot be placed reads as the message, which is the
+        // safe half of the guess.
+        yield 'a reason nobody has seen before' => ['Something went wrong', false];
+        yield 'no reason at all' => ['', false];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('rejectReasons')]
+    public function testARejectSaysWhetherItWasTheAddressOrTheMessage(string $message, bool $expected): void
+    {
+        $body = json_encode([
+            'event' => 'reject',
+            'rcpt' => 'customer@example.net',
+            'time' => '2026-09-05T09:02:11Z',
+            'message' => $message,
+        ], JSON_THROW_ON_ERROR);
+
+        $payload = (new Smtp2goReports())->parse(new WebhookRequest(
+            headers: ['content-type' => 'application/json'],
+            body: $body,
+        ));
+
+        self::assertCount(1, $payload->events);
+        self::assertSame(Event::DROPPED, $payload->events[0]->type);
+        self::assertSame($expected, $payload->events[0]->hard, $message === '' ? 'no message' : $message);
+        self::assertSame($expected, $payload->events[0]->isRefusedAddress());
     }
 
     // ------------------------------------------------------------- internals

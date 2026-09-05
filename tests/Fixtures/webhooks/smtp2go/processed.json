@@ -1,0 +1,18 @@
+{
+  "event": "processed",
+  "time": "2026-09-04T10:15:02Z",
+  "sendtime": "2026-09-04T10:15:01Z",
+  "sender": "orders@example.com",
+  "from": "Example Store <orders@example.com>",
+  "from_address": "orders@example.com",
+  "from_name": "Example Store",
+  "rcpt": "customer@example.net",
+  "recipients": ["customer@example.net"],
+  "auth": "api-5BFDE1E62529",
+  "email_id": "1u0SwL-B9zBpi9ffUq-JAB2",
+  "id": "9f1c2f5e-7c3a-4a2d-9d55-2b6f0f3d7a11",
+  "message-id": "<20260904101501.1234@example.com>",
+  "subject": "Your order #1042 is confirmed",
+  "srchost": "203.0.113.24",
+  "X-Grav-Send-Id": "41"
+}

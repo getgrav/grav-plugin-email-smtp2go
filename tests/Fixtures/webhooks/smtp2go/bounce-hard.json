@@ -1,0 +1,20 @@
+{
+  "event": "bounce",
+  "bounce": "hard",
+  "time": "2026-09-04T10:15:08Z",
+  "sendtime": "2026-09-04T10:15:01Z",
+  "sender": "orders@example.com",
+  "from": "Example Store <orders@example.com>",
+  "from_address": "orders@example.com",
+  "from_name": "Example Store",
+  "rcpt": "nosuchuser@example.net",
+  "recipients": ["nosuchuser@example.net"],
+  "auth": "api-5BFDE1E62529",
+  "host": "mx1.example.net",
+  "message": "550 5.1.1 <nosuchuser@example.net>: Recipient address rejected: User unknown in virtual mailbox table",
+  "email_id": "1u0SwL-B9zBpi9ffUq-JAB2",
+  "id": "b1a9f0c2-9ee1-4a53-b0d4-77c5e2a1f309",
+  "message-id": "<20260904101501.1234@example.com>",
+  "subject": "Your order #1042 is confirmed",
+  "X-Grav-Send-Id": "41"
+}

@@ -1,0 +1,20 @@
+{
+  "event": "bounce",
+  "bounce": "soft",
+  "time": "2026-09-04T10:15:08Z",
+  "sendtime": "2026-09-04T10:15:01Z",
+  "sender": "orders@example.com",
+  "from": "Example Store <orders@example.com>",
+  "from_address": "orders@example.com",
+  "from_name": "Example Store",
+  "rcpt": "customer@example.net",
+  "recipients": ["customer@example.net"],
+  "auth": "api-5BFDE1E62529",
+  "host": "mx1.example.net",
+  "message": "452 4.2.2 The email account that you tried to reach is over quota",
+  "email_id": "1u0SwL-B9zBpi9ffUq-JAB2",
+  "id": "c7e40d33-2b18-4c99-8c1e-0aa4c6b2d8e5",
+  "message-id": "<20260904101501.1234@example.com>",
+  "subject": "Your order #1042 is confirmed",
+  "X-Grav-Send-Id": "41"
+}

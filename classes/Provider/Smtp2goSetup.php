@@ -33,6 +33,15 @@ use Grav\Plugin\Email\Providers\WebhookSetup;
  * webhooks first and stops when one is already pointing at the same address. A
  * merchant who presses the button twice ends up with one webhook and a sentence
  * saying it was already there.
+ *
+ * ## Pressing it after the secret changed
+ *
+ * A new secret is a new address, and the webhook SMTP2GO holds is then posting
+ * at one that answers 404. The webhook is still recognisably this store's: its
+ * URL starts with the same endpoint and only the secret on the end differs. So
+ * {@see create()} finds it by that prefix and edits it to the new address
+ * (`POST /v3/webhook/edit`) rather than adding a second one, which an account at
+ * its webhook limit could not do anyway.
  */
 final class Smtp2goSetup implements WebhookSetup
 {
@@ -82,11 +91,29 @@ final class Smtp2goSetup implements WebhookSetup
             return SetupResult::failed('There is no webhook address to register yet.');
         }
 
-        $already = $this->api->webhookAt($key, $url);
+        $webhooks = $this->api->webhooks($key);
+        $already = $webhooks === null ? null : Smtp2goApi::idAt($webhooks, $url);
         if ($already !== null) {
             return SetupResult::ok(
                 'SMTP2GO already has a webhook at this address, so nothing was added.',
                 $already > 0 ? (string)$already : null
+            );
+        }
+
+        // The store's own webhook, registered against a secret that has since
+        // changed. Pointing it at the new address is the only move that leaves
+        // one working webhook: the old address answers 404, and an account at
+        // its webhook limit has no room for a second one.
+        $stale = $webhooks === null ? null : Smtp2goApi::idUnder($webhooks, self::endpointOf($url));
+        if ($stale !== null) {
+            $answer = $this->api->updateWebhook($key, $stale, $url, self::theirNames($events));
+            if (!$answer['ok']) {
+                return SetupResult::failed(self::sentence($answer['message']));
+            }
+
+            return SetupResult::ok(
+                'SMTP2GO had this store\'s webhook registered with an older secret. It now points at this address.',
+                (string)$stale
             );
         }
 
@@ -131,6 +158,21 @@ final class Smtp2goSetup implements WebhookSetup
         }
 
         return $names === [] ? Smtp2goApi::EVENTS : $names;
+    }
+
+    /**
+     * The address without its secret: everything up to and including the last
+     * slash. Two webhook URLs that share it belong to the same store.
+     */
+    private static function endpointOf(string $url): string
+    {
+        $url = trim($url);
+        $cut = strrpos($url, '/');
+        if ($cut === false || $cut < \strlen('https://x/')) {
+            return '';
+        }
+
+        return substr($url, 0, $cut + 1);
     }
 
     /** @param array<string, mixed> $config */

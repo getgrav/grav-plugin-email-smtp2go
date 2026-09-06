@@ -50,7 +50,7 @@ You do not set any of this up here. A plugin that wants delivery reports — the
 
 **What you get once it is set up.** Bounced addresses stop being mailed. Complaints do the same. So do the messages SMTP2GO refuses to send at all, which it calls **reject** and reports when the address is already on your account's suppression list. Delivered, opened and clicked counts fill in per campaign. Nothing else changes about how mail is sent.
 
-**The one button.** Paste your API key into the field above and press whatever the other plugin calls Set up — in the newsletter add-on it is "Set up in SMTP2GO". The webhook is created for you with the right events, the JSON output format and the send header registered. Pressing it twice leaves one webhook, not two. The key needs the **Webhooks** permission — see below for the three things on that screen that matter.
+**The one button.** Paste your API key into the field above and press whatever the other plugin calls Set up — in the newsletter add-on it is "Set up in SMTP2GO". The webhook is created for you with the right events, the JSON output format and the send header registered. Pressing it twice leaves one webhook, not two, and pressing it after the secret has changed points the existing webhook at the new address rather than adding a second. The key needs the **Webhooks** permission — see below for the three things on that screen that matter.
 
 **Doing it by hand.** If you would rather, or if your key is send-only and staying that way:
 
@@ -67,7 +67,7 @@ You do not set any of this up here. A plugin that wants delivery reports — the
 Ticked per key in SMTP2GO under **Settings → API Keys**, on the key's own **Permissions** tab. Three of the things on that screen matter, and nothing else does:
 
 - **Emails** — `POST /v3/email/send`, which is how the API transport sends. Not needed on the SMTP transport, where the key is not used to send at all.
-- **Webhooks** — `/v3/webhook/add` and `/v3/webhook/view`, which is the Set up button creating the webhook and reading back what is already registered.
+- **Webhooks** — `/v3/webhook/add`, `/v3/webhook/edit` and `/v3/webhook/view`, which is the Set up button creating the webhook, repointing it after a secret change, and reading back what is already registered.
 - **Sender Domains** — `/v3/domain/view`, and view is enough. Optional: it is what lets a deliverability check read your domain's DKIM selector and custom return path straight from your account. Without it nothing breaks; somebody types the selector into the other plugin's settings by hand instead.
 
 Statistics, Activity and the rest of that screen are not read by anything here. A **send-only** key sends mail perfectly well and cannot create a webhook, and that is by far the most common reason the Set up button refuses — SMTP2GO's own sentence comes back when it does.

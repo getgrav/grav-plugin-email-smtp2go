@@ -146,6 +146,49 @@ final class Smtp2goSetupTest extends TestCase
         self::assertSame(0, $http->countTo('/webhook/add'), 'nothing should have been added');
     }
 
+    /**
+     * The store's webhook registered against an older secret is edited to the
+     * new address rather than joined by a second one.
+     */
+    public function testAWebhookWithAnOlderSecretIsPointedAtTheNewAddress(): void
+    {
+        $http = (new FakeHttp())
+            ->willAnswer('/webhook/view', 200, ['data' => ['webhooks' => [
+                ['id' => 812, 'url' => 'https://store.example.com/newsletter/webhook/smtp2go/the-old-secret'],
+            ]]])
+            ->willAnswer('/webhook/edit', 200, ['data' => ['id' => 812]]);
+
+        $result = self::button($http)->create(self::URL, self::EVENTS, []);
+
+        self::assertTrue($result->ok);
+        self::assertSame('812', $result->webhookId);
+        self::assertStringContainsString('older secret', $result->message);
+        self::assertSame(0, $http->countTo('/webhook/add'), 'nothing should have been added');
+
+        $call = $http->callTo('/webhook/edit');
+        self::assertNotNull($call);
+        self::assertSame(812, $call['body']['id']);
+        self::assertSame(self::URL, $call['body']['url']);
+        self::assertSame('json', $call['body']['output_format']);
+        self::assertSame([SendHeader::name()], $call['body']['headers']);
+    }
+
+    /** A refused edit comes back in their words, like a refused add. */
+    public function testARefusedEditIsAPlainSentence(): void
+    {
+        $http = (new FakeHttp())
+            ->willAnswer('/webhook/view', 200, ['data' => ['webhooks' => [
+                ['id' => 812, 'url' => 'https://store.example.com/newsletter/webhook/smtp2go/the-old-secret'],
+            ]]])
+            ->willAnswer('/webhook/edit', 403, ['data' => ['error' => 'API key does not have permission']]);
+
+        $result = self::button($http)->create(self::URL, self::EVENTS, []);
+
+        self::assertFalse($result->ok);
+        self::assertStringContainsString('permission', $result->message);
+        self::assertStringContainsString('Webhooks', $result->message);
+    }
+
     /** A webhook at some other address is not this one. */
     public function testAWebhookAtAnotherAddressDoesNotCountAsThisOne(): void
     {

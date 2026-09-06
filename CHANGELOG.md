@@ -1,3 +1,9 @@
+# v1.1.1
+## 09/05/2026
+
+1. [](#bugfix)
+    * **Set up now repairs a webhook whose secret has changed.** A store that generated a new secret, or lost its configuration, was told nothing was registered while SMTP2GO still held a webhook at the old address, and on an account at its webhook limit pressing Set up could not add another. Set up now recognises the store's own webhook by its endpoint and edits it to the new address, with the JSON format and the send header kept.
+
 # v1.1.0
 ## 09/05/2026
 

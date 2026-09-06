@@ -136,6 +136,90 @@ final class Smtp2goApi
     }
 
     /**
+     * Point an existing webhook at a new address, keeping the format and the
+     * send header it needs.
+     *
+     * This is what `Set up` does when the store's secret has changed since the
+     * webhook was made: the old URL answers 404, SMTP2GO has no upsert, and an
+     * account on the free plan has no room for a second webhook anyway. Editing
+     * the one that is there is the only move that leaves one working webhook.
+     *
+     * @param  list<string> $events SMTP2GO's own event names
+     * @return array{ok: bool, id: int|null, message: string, events: list<string>}
+     */
+    public function updateWebhook(string $apiKey, int $id, string $url, array $events = self::EVENTS): array
+    {
+        $apiKey = trim($apiKey);
+        $events = $events === [] ? self::EVENTS : $events;
+
+        if ($apiKey === '') {
+            return self::no('no SMTP2GO API key is configured', $events);
+        }
+        if ($id <= 0) {
+            return self::no('there is no webhook to update', $events);
+        }
+        if (trim($url) === '') {
+            return self::no('there is no webhook URL to register', $events);
+        }
+
+        $answer = $this->http->postJson(self::BASE . '/webhook/edit', [
+            'id' => $id,
+            'url' => $url,
+            'events' => array_values($events),
+            'output_format' => 'json',
+            'headers' => [SendHeader::name()],
+        ], [self::KEY_HEADER => $apiKey]);
+
+        $refusal = self::refusalIn($answer);
+        if ($refusal !== null) {
+            return self::no($refusal, $events);
+        }
+
+        return [
+            'ok' => true,
+            'id' => $id,
+            'message' => sprintf('Webhook number %d in SMTP2GO now points at this address.', $id),
+            'events' => $events,
+        ];
+    }
+
+    /**
+     * The id of a webhook pointing somewhere under this prefix, or null.
+     *
+     * A store's webhook address is its endpoint followed by a secret, so a
+     * webhook whose URL starts with the endpoint but does not match the whole
+     * address is this store's webhook registered against an older secret. That
+     * is the one worth updating rather than adding beside.
+     *
+     * Only a numbered webhook is answered, because an edit needs the number.
+     *
+     * @param list<mixed> $webhooks what {@see webhooks()} answered
+     */
+    public static function idUnder(array $webhooks, string $prefix): ?int
+    {
+        $prefix = trim($prefix);
+        if ($prefix === '') {
+            return null;
+        }
+
+        foreach ($webhooks as $webhook) {
+            if (!\is_array($webhook)) {
+                continue;
+            }
+            $url = trim((string)($webhook['url'] ?? ''));
+            if ($url === '' || !str_starts_with($url, $prefix)) {
+                continue;
+            }
+            $id = $webhook['id'] ?? null;
+            if (\is_numeric($id) && (int)$id > 0) {
+                return (int)$id;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * The id of a webhook already pointing at this address, or null.
      *
      * This is what keeps a second press of the button from leaving a store with
@@ -151,13 +235,21 @@ final class Smtp2goApi
      */
     public function webhookAt(string $apiKey, string $url): ?int
     {
+        $webhooks = $this->webhooks($apiKey);
+
+        return $webhooks === null ? null : self::idAt($webhooks, $url);
+    }
+
+    /**
+     * The id of the webhook in this list pointing at exactly this address, or
+     * null; zero where one is there and their answer did not number it.
+     *
+     * @param list<mixed> $webhooks what {@see webhooks()} answered
+     */
+    public static function idAt(array $webhooks, string $url): ?int
+    {
         $url = trim($url);
         if ($url === '') {
-            return null;
-        }
-
-        $webhooks = $this->viewWebhooks($apiKey);
-        if ($webhooks === null) {
             return null;
         }
 
@@ -181,14 +273,15 @@ final class Smtp2goApi
     /**
      * The account's webhooks, or null when they could not be read at all.
      *
-     * Why they could not be read is deliberately not answered: the only caller
-     * is {@see webhookAt()}, and a key that cannot list webhooks is about to be
-     * refused by the create call in SMTP2GO's own words. Two messages about one
-     * permission is one message too many.
+     * Why they could not be read is deliberately not answered: a key that
+     * cannot list webhooks is about to be refused by the create call in
+     * SMTP2GO's own words, and two messages about one permission is one message
+     * too many. Read once and matched twice by the setup, against the exact
+     * address and then against the endpoint, so SMTP2GO is asked one question.
      *
      * @return list<mixed>|null
      */
-    private function viewWebhooks(string $apiKey): ?array
+    public function webhooks(string $apiKey): ?array
     {
         $apiKey = trim($apiKey);
 
@@ -369,6 +462,36 @@ final class Smtp2goApi
                 $returnPaths[] = $host;
             }
         }
+    }
+
+    /**
+     * Why an answer from one of the webhook endpoints is a refusal, or null
+     * where it is not.
+     *
+     * Their errors nest under `data` on these endpoints rather than sitting at
+     * the top level the way the general API reference shows, and a transport
+     * failure arrives with status zero and the error on the side.
+     *
+     * @param array{status: int, body: mixed, error: string} $answer
+     */
+    private static function refusalIn(array $answer): ?string
+    {
+        if ($answer['status'] === 0) {
+            return $answer['error'] !== ''
+                ? 'SMTP2GO could not be reached: ' . $answer['error']
+                : 'SMTP2GO could not be reached';
+        }
+
+        $body = \is_array($answer['body'] ?? null) ? $answer['body'] : [];
+        $data = \is_array($body['data'] ?? null) ? $body['data'] : [];
+        $error = trim((string)($data['error'] ?? $body['error'] ?? ''));
+        if ($answer['status'] < 200 || $answer['status'] >= 300 || $error !== '') {
+            return $error !== ''
+                ? 'SMTP2GO refused it: ' . $error
+                : sprintf('SMTP2GO answered %d', $answer['status']);
+        }
+
+        return null;
     }
 
     /**

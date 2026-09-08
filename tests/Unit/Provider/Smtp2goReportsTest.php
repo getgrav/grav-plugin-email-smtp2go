@@ -97,6 +97,23 @@ final class Smtp2goReportsTest extends TestCase
             'reason' => 'Sending from an unverified sender is not allowed',
         ]];
 
+        // The same refusal as it really arrives, captured from a live account
+        // rather than written from the field table. Two things the invented one
+        // above got generously wrong: SMTP2GO fills both id fields with the
+        // literal string `Unavailable` when a message never left, and it echoes
+        // no send header at all. So the fixture that was meant to cover this
+        // case gave the parser three ways to identify a message where reality
+        // gives it none — and the parser stored `Unavailable` as though it were
+        // an id, in the two columns a delivery report is matched by.
+        yield 'reject with no ids at all' => ['reject-no-ids', [
+            'type' => Event::DROPPED,
+            'hard' => false,
+            'email' => 'customer@example.net',
+            'message_id' => null,
+            'provider_id' => null,
+            'send_id' => null,
+        ]];
+
         // Two they send and this store does not act on.
         yield 'processed is not acted on' => ['processed', null];
         yield 'unsubscribe is not acted on' => ['unsubscribe', null];

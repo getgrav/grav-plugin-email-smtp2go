@@ -215,8 +215,8 @@ final class Smtp2goReports implements DeliveryReports
             $type,
             $hard,
             self::recipient($body),
-            (string)($body['message-id'] ?? ''),
-            (string)($body['email_id'] ?? ''),
+            self::idOrNothing($body['message-id'] ?? null),
+            self::idOrNothing($body['email_id'] ?? null),
             self::moment($body),
             self::reason($body, $type),
             self::sendId($body),
@@ -227,6 +227,26 @@ final class Smtp2goReports implements DeliveryReports
     {
         return SendHeader::name();
     }
+
+    /**
+     * SMTP2GO's word for "there isn't one", read as an id by nobody.
+     *
+     * A message SMTP2GO refuses before it leaves has no ids to report, and
+     * rather than omitting the fields or sending them empty it fills both with
+     * the literal string `Unavailable`. Passed through, that is a sentinel
+     * stored as though it were an identifier — the same non-id on every refused
+     * message, in the two columns a delivery report is matched by. Seen on a
+     * real refusal: `"message_id": "Unavailable", "provider_id": "Unavailable"`.
+     */
+    private static function idOrNothing(mixed $value): string
+    {
+        $value = trim((string)$value);
+
+        return strcasecmp($value, self::NO_ID) === 0 ? '' : $value;
+    }
+
+    /** What SMTP2GO puts in an id field when it has no id to put there. */
+    private const NO_ID = 'Unavailable';
 
     // ------------------------------------------------------------- internals
 

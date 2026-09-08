@@ -36,7 +36,7 @@ final class Smtp2goSetupTest extends TestCase
     public function testItCreatesTheWebhookAndSaysWhichOneItMade(): void
     {
         $http = (new FakeHttp())
-            ->willAnswer('/webhook/view', 200, ['data' => ['webhooks' => []]])
+            ->willAnswer('/webhook/view', 200, ['data' => []])
             ->willAnswer('/webhook/add', 200, ['data' => ['id' => 812]]);
 
         $result = self::button($http)->create(self::URL, self::EVENTS, []);
@@ -58,7 +58,7 @@ final class Smtp2goSetupTest extends TestCase
     public function testTheRequestSetsTheOutputFormatAndRegistersTheSendHeader(): void
     {
         $http = (new FakeHttp())
-            ->willAnswer('/webhook/view', 200, ['data' => ['webhooks' => []]])
+            ->willAnswer('/webhook/view', 200, ['data' => []])
             ->willAnswer('/webhook/add', 200, ['data' => ['id' => 1]]);
 
         self::button($http)->create(self::URL, self::EVENTS, []);
@@ -83,7 +83,7 @@ final class Smtp2goSetupTest extends TestCase
     public function testAnEventThisProviderCannotReportIsLeftOutRatherThanRefused(): void
     {
         $http = (new FakeHttp())
-            ->willAnswer('/webhook/view', 200, ['data' => ['webhooks' => []]])
+            ->willAnswer('/webhook/view', 200, ['data' => []])
             ->willAnswer('/webhook/add', 200, ['data' => ['id' => 1]]);
 
         $result = self::button($http)->create(self::URL, [Event::BOUNCED, Event::DROPPED, 'sms_delivered'], []);
@@ -135,7 +135,7 @@ final class Smtp2goSetupTest extends TestCase
     public function testPressingItTwiceDoesNotLeaveTwoWebhooks(): void
     {
         $http = (new FakeHttp())->willAnswer('/webhook/view', 200, [
-            'data' => ['webhooks' => [['id' => 812, 'url' => self::URL]]],
+            'data' => [['id' => 812, 'url' => self::URL]],
         ]);
 
         $result = self::button($http)->create(self::URL, self::EVENTS, []);
@@ -153,9 +153,9 @@ final class Smtp2goSetupTest extends TestCase
     public function testAWebhookWithAnOlderSecretIsPointedAtTheNewAddress(): void
     {
         $http = (new FakeHttp())
-            ->willAnswer('/webhook/view', 200, ['data' => ['webhooks' => [
+            ->willAnswer('/webhook/view', 200, ['data' => [
                 ['id' => 812, 'url' => 'https://store.example.com/newsletter/webhook/smtp2go/the-old-secret'],
-            ]]])
+            ]])
             ->willAnswer('/webhook/edit', 200, ['data' => ['id' => 812]]);
 
         $result = self::button($http)->create(self::URL, self::EVENTS, []);
@@ -177,9 +177,9 @@ final class Smtp2goSetupTest extends TestCase
     public function testARefusedEditIsAPlainSentence(): void
     {
         $http = (new FakeHttp())
-            ->willAnswer('/webhook/view', 200, ['data' => ['webhooks' => [
+            ->willAnswer('/webhook/view', 200, ['data' => [
                 ['id' => 812, 'url' => 'https://store.example.com/newsletter/webhook/smtp2go/the-old-secret'],
-            ]]])
+            ]])
             ->willAnswer('/webhook/edit', 403, ['data' => ['error' => 'API key does not have permission']]);
 
         $result = self::button($http)->create(self::URL, self::EVENTS, []);
@@ -189,7 +189,15 @@ final class Smtp2goSetupTest extends TestCase
         self::assertStringContainsString('Webhooks', $result->message);
     }
 
-    /** A webhook at some other address is not this one. */
+    /**
+     * A webhook at some other address is not this one.
+     *
+     * The one fixture here still written as `data.webhooks`, on purpose: that
+     * is the shape SMTP2GO's documentation describes and the one this plugin
+     * was built against, and it is read as well as the bare list every other
+     * test now uses. Keeping one of each means the day they start wrapping it
+     * is not the day this stops working.
+     */
     public function testAWebhookAtAnotherAddressDoesNotCountAsThisOne(): void
     {
         $http = (new FakeHttp())
@@ -202,6 +210,32 @@ final class Smtp2goSetupTest extends TestCase
 
         self::assertTrue($result->ok);
         self::assertSame('813', $result->webhookId);
+    }
+
+    /**
+     * The bug this shape-tolerance exists for, found with a real key.
+     *
+     * `/v3/webhook/view` answers `data` as the list of webhooks itself, not as
+     * `data.webhooks` — so the account's existing webhook was never seen, an
+     * account with one looked like an account with none, and because SMTP2GO
+     * allows exactly one, Set up went on to ask for a second and was refused.
+     * Every fixture in this file had been written to the documented shape, so
+     * the whole suite passed against a call that had never once worked.
+     */
+    public function testAnExistingWebhookIsFoundWhenTheListArrivesUnwrapped(): void
+    {
+        $http = (new FakeHttp())
+            ->willAnswer('/webhook/view', 200, ['data' => [
+                ['id' => 19092, 'url' => 'https://store.example.com/newsletter/webhook/smtp2go/an-older-secret'],
+            ]])
+            ->willAnswer('/webhook/edit', 200, ['data' => ['id' => 19092]]);
+
+        $result = self::button($http)->create(self::URL, self::EVENTS, []);
+
+        self::assertTrue($result->ok);
+        self::assertSame('19092', $result->webhookId);
+        self::assertSame(1, $http->countTo('/webhook/edit'), 'the one they allow is repointed');
+        self::assertSame(0, $http->countTo('/webhook/add'), 'and never joined by a second');
     }
 
     /** No key anywhere is a sentence naming where to put one. */
@@ -233,7 +267,7 @@ final class Smtp2goSetupTest extends TestCase
     public function testAKeyHandedInWinsOverThePluginsOwn(): void
     {
         $http = (new FakeHttp())
-            ->willAnswer('/webhook/view', 200, ['data' => ['webhooks' => []]])
+            ->willAnswer('/webhook/view', 200, ['data' => []])
             ->willAnswer('/webhook/add', 200, ['data' => ['id' => 1]]);
 
         self::button($http)->create(self::URL, self::EVENTS, ['api_key' => 'api-a-narrower-key']);

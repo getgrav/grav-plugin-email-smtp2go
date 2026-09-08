@@ -1,3 +1,9 @@
+# v1.1.2
+## 09/08/2026
+
+1. [](#bugfix)
+    * **Set up finds the webhook the account already has, so it repoints it instead of being refused.** `/v3/webhook/view` answers `data` as the list of webhooks itself; this read `data.webhooks`, which is the shape their documentation describes and which never arrives. So the list came back empty every time, an account with a webhook looked like an account with none, and the existing-webhook and older-secret paths — both already written and both correct — could never run. SMTP2GO allows exactly one webhook per account, so what happened next was a request to add a second, and a refusal. Pressing **Set up** on a store that had ever generated a secret before could only fail, and the merchant was left to paste the address in by hand. Both shapes are now read. Every test fixture here had been written to the documented shape, so the whole suite passed against a call that had never once worked against a real account — the case that matters is now pinned with the shape the API really sends
+
 # v1.1.1
 ## 09/05/2026
 

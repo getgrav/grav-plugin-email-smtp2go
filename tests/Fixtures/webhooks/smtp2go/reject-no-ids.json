@@ -1,0 +1,16 @@
+{
+  "event": "reject",
+  "time": "2026-09-08T20:40:34Z",
+  "sendtime": "2026-09-08T20:40:34Z",
+  "sender": "info@example.com",
+  "from": "Example Store <info@example.com>",
+  "from_address": "info@example.com",
+  "from_name": "Example Store",
+  "rcpt": "customer@example.net",
+  "recipients": ["customer@example.net"],
+  "auth": "api-5BFDE1E62529",
+  "message": "From header sender domain not verified (example.com) On your Sending > Verified Senders page verify the sender domain or email to be allowed to send.",
+  "email_id": "Unavailable",
+  "message-id": "Unavailable",
+  "subject": "Your order #1042 is confirmed"
+}

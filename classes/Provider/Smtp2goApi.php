@@ -297,7 +297,17 @@ final class Smtp2goApi
 
         $body = \is_array($answer['body'] ?? null) ? $answer['body'] : [];
         $data = \is_array($body['data'] ?? null) ? $body['data'] : [];
-        $webhooks = $data['webhooks'] ?? [];
+
+        // Both shapes, because the one this was written to expect is not the
+        // one the API sends. `/v3/webhook/view` answers `data` as the list of
+        // webhooks itself; reading `data.webhooks` found nothing every time, so
+        // an account that already had a webhook looked like an account with
+        // none — and since SMTP2GO allows exactly one, Set up then tried to
+        // create a second and was refused. Every test fixture here had been
+        // written to the same wrong shape, so nothing offline could catch it;
+        // it took a real key against a real account. `data.webhooks` is kept
+        // for the day they wrap it, which is the shape their docs describe.
+        $webhooks = \array_is_list($data) ? $data : ($data['webhooks'] ?? []);
 
         return \is_array($webhooks) ? array_values($webhooks) : [];
     }

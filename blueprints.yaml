@@ -45,7 +45,7 @@ form:
         smtp: SMTP
 
     api_key:
-      type: text
+      type: password
       label: API Key
       help: SMTP2GO API key (begins with `api-`). Sends the mail when Transport is API, and is also what sets up delivery reports and reads your sending domain's DNS from SMTP2GO — those work on the SMTP transport too, so it is worth filling in either way. For the delivery-report webhook it needs the Webhooks permission, which is set on the key's own page under Settings, API Keys.
 
